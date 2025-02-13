@@ -1,0 +1,22 @@
+services:
+
+  # Everything is run from this container instead of the host machine.
+  # If you need some core dependencies or any custom install, just modify the Dockerfile.devEnv file.
+  dev-env:
+    build: 
+      context: ../../
+      dockerfile: docker/dev/Dockerfile.devEnv
+      args:
+        - NODE_VERSION=${NODE_VERSION}
+    volumes:
+      - ../..:/app/infrastructure:delegated
+      - volume-pnpm-store:/app/infrastructure/.pnpm-store
+      - volume-aws-credentials:/root/.aws
+    working_dir: /app/infrastructure
+    env_file:
+      - ../../.env
+    command: bash
+
+volumes:
+  volume-pnpm-store: 
+  volume-aws-credentials:

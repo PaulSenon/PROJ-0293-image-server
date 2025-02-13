@@ -1,0 +1,41 @@
+# Declare build argument with default value
+ARG NODE_VERSION
+
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim
+
+WORKDIR /app/infrastructure
+
+# Install basic dev tools
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    make \
+    curl \
+    unzip \
+    python3 \
+    python3-pip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install AWS CLI v2
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"; \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
+    url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"; \
+    else \
+    echo "Unsupported architecture"; exit 1; \
+    fi && \
+    curl "$url" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf aws awscliv2.zip
+
+# Install AWS CDK CLI globally 
+RUN npm install -g aws-cdk corepack
+
+# Enable corepack
+COPY package.json ./
+RUN corepack enable && \
+    corepack prepare --activate; 
+
+CMD ["bash"] 
