@@ -27,21 +27,6 @@ export const handler = awslambda.streamifyResponse(async (event, responseStream)
 
     const sourceETag = headResult.ETag || '';
 
-
-   
-
-    
-    // responseStream = awslambda.HttpResponseStream.from(responseStream, {
-    //   statusCode: 200,
-    //   headers: {
-    //     'Content-Type': 'image/jpeg',
-    //     'Cache-Control': 'public, max-age=31536000',
-    //     'ETag': sourceETag,
-    //   }
-    // })
-    // await pipeline(response.Body, responseStream);
-
-
     // Determine output format
     let outputFormat = type || 'jpeg';
     if (!type) {
@@ -70,7 +55,6 @@ export const handler = awslambda.streamifyResponse(async (event, responseStream)
       }
 
       responseStream = awslambda.HttpResponseStream.from(responseStream, metadata)
-
       responseStream.end();
       return;
     }
@@ -209,4 +193,4 @@ async function streamToBuffer(stream) {
     chunks.push(Buffer.from(chunk));
   }
   return Buffer.concat(chunks);
-}
+} 

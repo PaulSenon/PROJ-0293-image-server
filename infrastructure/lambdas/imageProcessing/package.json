@@ -1,0 +1,16 @@
+{
+  "name": "image-processing-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function for image processing with streaming response",
+  "type": "module",
+  "main": "imageProcessor.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.744.0",
+    "exif-reader": "^2.0.2",
+    "iptc-reader": "^1.0.1",
+    "sharp": "^0.33.5"
+  }
+}
