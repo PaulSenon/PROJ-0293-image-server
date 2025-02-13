@@ -159,7 +159,6 @@ export class ImageServerStack extends cdk.Stack {
         origin: new origins.FunctionUrlOrigin(processorUrl, {
           originShieldEnabled: true,
           originShieldRegion: this.region,
-          originPath: "/img/resize",
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: new cloudfront.CachePolicy(this, "ImageCachePolicy", {
