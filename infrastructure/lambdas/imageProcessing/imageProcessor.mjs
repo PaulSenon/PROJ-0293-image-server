@@ -5,19 +5,21 @@ import { pipeline } from "node:stream/promises";
 import exifReader from 'exif-reader';
 import iptcReader from 'iptc-reader';
 
-const s3Client = new S3Client({});
-const BUCKET_NAME = process.env.BUCKET_NAME;
+
 
 export const handler = awslambda.streamifyResponse(async (event, responseStream) => {
-  console.log('queryStringParameters', event.queryStringParameters);
-  console.log('headers', event.headers);
-  console.log('bucketName', BUCKET_NAME);
-  const { uri, w, h, q, type, meta } = event.queryStringParameters;
-  const acceptHeader = event.headers['accept'] || '';
-  const debugCacheKey = event.headers['x-cache-key'] || '';
-  const ifNoneMatch = event.headers['if-none-match'];
-
   try {
+    const s3Client = new S3Client({});
+    const BUCKET_NAME = process.env.BUCKET_NAME;  
+    
+    console.log('queryStringParameters', event.queryStringParameters);
+    console.log('headers', event.headers);
+    console.log('bucketName', BUCKET_NAME);
+    const { uri, w, h, q, type, meta } = event.queryStringParameters;
+    const acceptHeader = event.headers['accept'] || '';
+    const debugCacheKey = event.headers['x-cache-key'] || '';
+    const ifNoneMatch = event.headers['if-none-match'];
+
     // Check if the source image exists and get its ETag
     const headResult = await s3Client.send(new HeadObjectCommand({
       Bucket: BUCKET_NAME,
