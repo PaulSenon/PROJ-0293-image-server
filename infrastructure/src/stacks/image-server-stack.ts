@@ -4,6 +4,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 
 interface ImageServerStackProps extends cdk.StackProps {
@@ -103,9 +104,9 @@ export class ImageServerStack extends cdk.Stack {
     // Grant the Lambda function read permissions to the S3 bucket
     this.imageBucket.grantRead(this.processingFunction);
 
-    // Create Lambda Function URL
+    // Create Lambda Function URL with IAM auth
     const processorUrl = this.processingFunction.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
+      authType: lambda.FunctionUrlAuthType.AWS_IAM,
       invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
       cors: {
         allowedOrigins: ["*"],
@@ -153,12 +154,23 @@ export class ImageServerStack extends cdk.Stack {
       }
     );
 
+    // Create an Origin Access Control that tells CloudFront to sign requests (SIGV4)
+    const oac = new cloudfront.FunctionUrlOriginAccessControl(
+      this,
+      "ImageProcessorFunctionUrlOAC",
+      {
+        originAccessControlName: "ImageProcessorOAC",
+        signing: cloudfront.Signing.SIGV4_ALWAYS,
+      }
+    );
+
     // CloudFront distribution
     this.distribution = new cloudfront.Distribution(this, "ImageCDN", {
       defaultBehavior: {
         origin: new origins.FunctionUrlOrigin(processorUrl, {
           originShieldEnabled: true,
           originShieldRegion: this.region,
+          originAccessControlId: oac.originAccessControlId,
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: new cloudfront.CachePolicy(this, "ImageCachePolicy", {
@@ -217,6 +229,14 @@ export class ImageServerStack extends cdk.Stack {
     // Add specific resource tags
     cdk.Tags.of(this.distribution).add("ResourceType", "CloudFront");
     cdk.Tags.of(this.distribution).add("ResourceName", "ImageCDN");
+
+    this.processingFunction.addPermission("AllowCloudFrontInvoke", {
+      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
+      action: "lambda:InvokeFunctionUrl",
+      functionUrlAuthType: lambda.FunctionUrlAuthType.AWS_IAM,
+      // Restrict to this specific CloudFront distribution using its ARN
+      sourceArn: `arn:aws:cloudfront::${cdk.Aws.ACCOUNT_ID}:distribution/${this.distribution.distributionId}`,
+    });
 
     // Set up CloudWatch alarms
     this.setupMonitoring();
