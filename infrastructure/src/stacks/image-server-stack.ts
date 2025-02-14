@@ -1,10 +1,10 @@
 import * as cdk from "aws-cdk-lib";
-import * as s3 from "aws-cdk-lib/aws-s3";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
 
 interface ImageServerStackProps extends cdk.StackProps {
@@ -25,20 +25,19 @@ interface ImageServerStackProps extends cdk.StackProps {
  * Image Server Infrastructure Stack
  *
  * This stack manages the serverless image processing infrastructure including:
- * - S3 bucket for image storage (temporary, will be replaced by CMS bucket)
  * - Lambda function for image processing with streaming response
  * - CloudFront distribution for caching and delivery
  * - CloudWatch monitoring and alerting
  *
  * Dependencies:
- * - None currently (will depend on CMS stack in future for S3 bucket)
+ * - CMS stack (for S3 bucket and IAM role)
+ *   - SSM Parameter: /${cmsStackName}/media-bucket/name
+ *   - SSM Parameter: /${cmsStackName}/image-server/role-arn
  *
  * Exports:
  * - CloudFront URL
- * - Lambda function URL
  */
 export class ImageServerStack extends cdk.Stack {
-  public readonly imageBucket: s3.Bucket;
   public readonly processingFunction: lambda.Function;
   public readonly distribution: cloudfront.Distribution;
 
@@ -54,30 +53,28 @@ export class ImageServerStack extends cdk.Stack {
     cdk.Tags.of(this).add("Service", "ImageServer");
     cdk.Tags.of(this).add("ManagedBy", "CDK");
 
-    // Create temporary S3 bucket (will be replaced by CMS bucket later)
-    this.imageBucket = new s3.Bucket(this, "ImageBucket", {
-      versioned: false,
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      enforceSSL: true,
-      lifecycleRules: [
-        {
-          abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
-        },
-      ],
-      metrics: [
-        {
-          id: "EntireBucket",
-          prefix: "",
-        },
-      ],
-    });
+    // Import CMS bucket name from SSM parameter
+    const cmsBucketName = ssm.StringParameter.valueForStringParameter(
+      this,
+      `/${props.cmsStackName}/media-bucket/name`
+    );
 
-    // Add specific resource tags
-    cdk.Tags.of(this.imageBucket).add("ResourceType", "Storage");
-    cdk.Tags.of(this.imageBucket).add("ResourceName", "ImageBucket");
-    cdk.Tags.of(this.imageBucket).add("Temporary", "true");
+    // Import CMS bucket
+    // const cmsBucketName = s3.Bucket.fromBucketName(
+    //   this,
+    //   "ImportedCMSBucket",
+    //   cmsBucketName
+    // );
+
+    // Import image server role from CMS stack
+    const imageServerRole = iam.Role.fromRoleArn(
+      this,
+      "ImportedImageServerRole",
+      ssm.StringParameter.valueForStringParameter(
+        this,
+        `/${props.cmsStackName}/image-server/role-arn`
+      )
+    );
 
     // Create Lambda function for image processing
     this.processingFunction = new lambda.Function(
@@ -90,9 +87,10 @@ export class ImageServerStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(props.imageProcessor.timeout),
         memorySize: props.imageProcessor.memorySize,
         architecture: lambda.Architecture.ARM_64,
+        role: imageServerRole, // Use the role from CMS stack
         environment: {
           NODE_OPTIONS: "--enable-source-maps",
-          BUCKET_NAME: this.imageBucket.bucketName,
+          BUCKET_NAME: cmsBucketName,
         },
       }
     );
@@ -100,9 +98,6 @@ export class ImageServerStack extends cdk.Stack {
     // Add specific resource tags
     cdk.Tags.of(this.processingFunction).add("ResourceType", "Lambda");
     cdk.Tags.of(this.processingFunction).add("ResourceName", "ImageProcessor");
-
-    // Grant the Lambda function read permissions to the S3 bucket
-    this.imageBucket.grantRead(this.processingFunction);
 
     // Create Lambda Function URL with IAM auth
     const processorUrl = this.processingFunction.addFunctionUrl({
@@ -246,12 +241,6 @@ export class ImageServerStack extends cdk.Stack {
       value: this.distribution.distributionDomainName,
       description: "CloudFront Distribution URL",
       exportName: `${stackName}-distribution-url`,
-    });
-
-    new cdk.CfnOutput(this, "FunctionUrl", {
-      value: processorUrl.url,
-      description: "Lambda Function URL",
-      exportName: `${stackName}-function-url`,
     });
   }
 
