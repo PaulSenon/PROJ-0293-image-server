@@ -1,0 +1,50 @@
+{
+  "name": "image-server",
+  "version": "1.0.0",
+  "description": "Environment-agnostic image resizing server",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "rimraf dist && tsc",
+    "build:lambda": "bash scripts/build-lambda.sh",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rimraf dist node_modules"
+  },
+  "keywords": [
+    "image",
+    "resize",
+    "server",
+    "sharp",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@10.5.2+sha512.da9dc28cd3ff40d0592188235ab25d3202add8a207afbedc682220e4a0029ffbff4562102b9e6e46b4e3f9e8bd53e6d05de48544b0c57d4b0179e22c76d1199b",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.147",
+    "@types/node": "^22.13.9",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.7"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@types/express": "^5.0.0",
+    "exif-reader": "^2.0.2",
+    "express": "^4.21.2",
+    "iptc-reader": "^1.0.1",
+    "sharp": "^0.33.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
+  }
+}

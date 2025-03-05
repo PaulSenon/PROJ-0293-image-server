@@ -80,3 +80,50 @@ but if you don't want to enter the dev env bash, you can run this others make co
 | `make corepack-upgrade` | Upgrade corepack to the latest version |
 | `make run cmd="..."` | Run arbitrary command in dev container without entering it (from host then)|
 | `make help` | Display help with all available commands |
+
+## Lambda Function Deployment
+
+This infrastructure project is designed to work with the Lambda deployment package created by the `image-server/app` project.
+
+### Complete Deployment Process
+
+1. **Step 1: Build the Lambda Function**
+   ```bash
+   # Navigate to app directory
+   cd ../app
+   
+   # Build the Lambda function
+   make run cmd="pnpm build:lambda"
+   ```
+   This creates the deployment package at `image-server/app/dist/lambda-deployment.zip`
+
+2. **Step 2: Deploy the Infrastructure**
+   ```bash
+   # Navigate back to the infrastructure directory
+   cd ../infrastructure
+   
+   # Deploy using CDK
+   make cdk-deploy
+   ```
+
+### Key Details:
+
+- The Lambda function definition in the CDK stack references the deployment package at `../../image-server/app/dist/lambda-deployment.zip`
+- The handler is set to `index.handler` to match the exports in the bundled code
+- The infrastructure handles provisioning all necessary AWS resources (IAM roles, CloudFront distribution, etc.)
+
+### Integration Points
+
+- **Handler**: The infrastructure expects the Lambda deployment package to export a handler function at `index.handler`
+- **Environment Variables**: The infrastructure provides the following environment variables to the Lambda function:
+  - `BUCKET_NAME`: S3 bucket name for image storage
+  - `NODE_OPTIONS`: Set to `--enable-source-maps` for better error reporting
+
+### Troubleshooting
+
+If deployment fails with an error about missing Lambda code:
+1. Ensure you've built the Lambda deployment package in the app directory
+2. Check that the path `../../image-server/app/dist/lambda-deployment.zip` is accessible from the infrastructure directory
+3. Verify the handler name matches the exported function in your code
+
+## CDK Commands

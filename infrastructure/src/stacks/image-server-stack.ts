@@ -82,8 +82,10 @@ export class ImageServerStack extends cdk.Stack {
       "ImageProcessingLambda",
       {
         runtime: lambda.Runtime.NODEJS_22_X,
-        handler: "imageProcessor.handler",
-        code: lambda.Code.fromAsset("./lambdas/imageProcessing"),
+        handler: "index.handler",
+        code: lambda.Code.fromAsset(
+          "../../image-server/app/dist/lambda-deployment.zip"
+        ),
         timeout: cdk.Duration.seconds(props.imageProcessor.timeout),
         memorySize: props.imageProcessor.memorySize,
         architecture: lambda.Architecture.ARM_64,

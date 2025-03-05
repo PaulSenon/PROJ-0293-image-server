@@ -1,0 +1,57 @@
+services:
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"  # API port
+      - "9001:9001"  # Console port
+    environment:
+      S3_BUCKET: ${S3_BUCKET:-image-server-dev}
+      MINIO_ROOT_USER: ${DEV_ONLY_S3_ACCESS_KEY:-devuser}
+      MINIO_ROOT_PASSWORD: ${DEV_ONLY_S3_SECRET_KEY:-devpassword}
+      MINIO_ADDRESS: ":9000"
+      MINIO_CONSOLE_ADDRESS: ":9001"
+    volumes:
+      - volume-image-server-s3-data:/data
+    entrypoint: ""  # Override the default minio entrypoint
+    command: >
+      sh -c '
+        mkdir -p /data/${S3_BUCKET:-image-server-dev} &&
+        minio server /data --console-address ":9001" &
+        MINIO_PID=$$! &&
+        sleep 5 &&
+        mc alias set local http://localhost:9000 ${DEV_ONLY_S3_ACCESS_KEY:-devuser} ${DEV_ONLY_S3_SECRET_KEY:-devpassword} &&
+        mc mb local/${S3_BUCKET:-image-server-dev} -p || true &&
+        trap "echo Terminating...; kill -TERM $$MINIO_PID" SIGTERM SIGINT &&
+        wait $$MINIO_PID
+      '
+
+  dev:
+    build: 
+      context: ../
+      dockerfile: ./docker/Dockerfile.devEnv
+    volumes:
+      - ../:/app/image-server:delegated
+      - volume-pnpm-store-image-server:/app/image-server/.pnpm-store
+    working_dir: /app/image-server
+    ports:
+      - "3001:3001"
+    depends_on:
+      minio:
+        condition: service_started
+    env_file:
+      - ../.env
+      - ../.env.local
+      - ../.env.development
+      - ../.env.development.local 
+    environment:
+      - BUCKET_NAME=${S3_BUCKET:-image-server-dev}
+      - AWS_ACCESS_KEY_ID=${DEV_ONLY_S3_ACCESS_KEY:-devuser}
+      - AWS_SECRET_ACCESS_KEY=${DEV_ONLY_S3_SECRET_KEY:-devpassword}
+      - AWS_ENDPOINT=http://minio:9000
+      - AWS_REGION=us-east-1
+      - PORT=3001
+    command: bash
+
+volumes:
+  volume-pnpm-store-image-server:
+  volume-image-server-s3-data: 
