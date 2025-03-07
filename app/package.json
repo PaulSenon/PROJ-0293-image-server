@@ -40,7 +40,9 @@
     "exif-reader": "^2.0.2",
     "express": "^4.21.2",
     "iptc-reader": "^1.0.1",
-    "sharp": "^0.33.5"
+    "lambda-stream": "^0.5.0",
+    "sharp": "^0.33.5",
+    "zod": "^3.24.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
