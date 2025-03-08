@@ -1,5 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
-import type { IStreamRequestHandler } from "./IStreamRequestHandler.js";
+import type { IStreamRequestHandler } from "./interfaces/IStreamRequestHandler.js";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { streamifyResponse, ResponseStream, isInAWS } from "lambda-stream";
 import S3FileLoader from "../secondary/S3FileLoader.js";
