@@ -80,11 +80,10 @@ services:
     depends_on:
       s3:
         condition: service_started
-    # This allows testing Lambda locally using the Lambda Runtime Interface Emulator
-    entrypoint: ""
-    command: >
-      sh -c '/lambda-entrypoint.sh 
-      && echo "Lambda container started. You can invoke the function at: http://localhost:9000/2015-03-31/functions/function/invocations"'
+    # Lambda Runtime Interface Emulator (RIE) configuration
+    # Do NOT set an empty entrypoint - we need to use the default Lambda entrypoint
+    # but with the correct handler argument
+    command: "index.handler"
 
 
 volumes:

@@ -36,5 +36,15 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 # Copy Lambda deployment contents directly
 COPY --from=builder /tmp/lambda-extracted/ ${LAMBDA_TASK_ROOT}/
 
-# Set the Lambda handler
+# # Set environment variables for local testing
+# ENV LAMBDA_TASK_ROOT=/var/task \
+#   AWS_LAMBDA_RUNTIME_API=127.0.0.1:8080 \
+#   AWS_LAMBDA_FUNCTION_NAME=ImageProcessorLocal \
+#   AWS_LAMBDA_FUNCTION_MEMORY_SIZE=2048 \
+#   AWS_LAMBDA_FUNCTION_VERSION=$LATEST \
+#   AWS_LAMBDA_LOG_GROUP_NAME=/aws/lambda/ImageProcessorLocal \
+#   AWS_LAMBDA_LOG_STREAM_NAME=2023/12/31/[$LATEST]XXXXXXXXX \
+#   NODE_OPTIONS=""
+
+# Set the Lambda handler - this is used by the Lambda container's entrypoint script
 CMD ["index.handler"]

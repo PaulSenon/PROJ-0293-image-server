@@ -62,9 +62,11 @@ build-lambda: ## Build the lambda deployment package
 	$(call RUN_IN_DEV_ENV,pnpm run build:lambda)
 
 prod-express: docker-prod-build ## Run only the Express production container
+	$(COMPOSE) build iso-prod-express
 	$(COMPOSE) up iso-prod-express
 
 prod-lambda: docker-prod-build ## Run only the Lambda production container
+	$(COMPOSE) build iso-prod-lambda
 	$(COMPOSE) up iso-prod-lambda
 
 # Logs Commands
