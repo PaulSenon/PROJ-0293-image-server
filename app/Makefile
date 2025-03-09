@@ -12,11 +12,13 @@ SHELL := /bin/bash
 # Export all variables
 export
 
-.PHONY: install clean dev bash docker-build logs run test build
+.PHONY: install clean dev bash docker-build logs run test build build-lambda prod-express prod-lambda
 
 COMPOSE_PROJECT_NAME = image-server-app
 DOCKER_COMPOSE_FILE = ./docker/docker-compose.dev.yml
+# DOCKER_COMPOSE_PROD_FILE = ./docker/docker-compose.prod.yml
 COMPOSE = docker compose --file $(DOCKER_COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME)
+# COMPOSE_PROD = docker compose --file $(DOCKER_COMPOSE_PROD_FILE) --project-name $(COMPOSE_PROJECT_NAME)-prod
 
 # Helper function to run commands in dev container 
 define RUN_IN_DEV_ENV
@@ -56,9 +58,24 @@ test: ## Run tests
 build: ## Build the project
 	$(call RUN_IN_DEV_ENV,pnpm run build)
 
+build-lambda: ## Build the lambda deployment package
+	$(call RUN_IN_DEV_ENV,pnpm run build:lambda)
+
+prod-express: docker-prod-build ## Run only the Express production container
+	$(COMPOSE) up iso-prod-express
+
+prod-lambda: docker-prod-build ## Run only the Lambda production container
+	$(COMPOSE) up iso-prod-lambda
+
 # Logs Commands
 logs: ## View container logs
 	$(COMPOSE) logs -f dev
+
+logs-express: ## View Express server logs
+	$(COMPOSE) logs -f iso-prod-express
+
+logs-lambda: ## View Lambda server logs
+	$(COMPOSE) logs -f iso-prod-lambda
 
 # Docker commands
 docker-build: ## Build the Docker image

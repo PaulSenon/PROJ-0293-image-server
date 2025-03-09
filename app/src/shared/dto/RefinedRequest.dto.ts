@@ -19,7 +19,7 @@ export interface RefinedRequestParams {
   meta?: boolean;
 }
 export const RefinedRequestParamsSchema = z.object({
-  uri: z.string().url(),
+  uri: z.string(),
   w: z.number(),
   h: z.number().optional(),
   q: z.number().optional(),

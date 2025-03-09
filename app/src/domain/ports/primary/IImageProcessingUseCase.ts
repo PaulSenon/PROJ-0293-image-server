@@ -2,7 +2,7 @@ import type { ETag, Stream } from "../../../shared/domainObjects.types.js";
 import type {
   RawRequestHeaders,
   RawRequestParams,
-} from "../../../shared/dto/RawRequest.dto.js";
+} from "../../../shared/dto/Request.dto.js";
 import type { IUseCase } from "../../../shared/utils/useCase.types.js";
 import type { FileNotFoundException } from "../../exceptions/FileNotFoundException.js";
 import type { ImageProcessingException } from "../../exceptions/ImageProcessingException.js";

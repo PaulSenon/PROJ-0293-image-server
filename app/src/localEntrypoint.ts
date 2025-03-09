@@ -1,8 +1,4 @@
-import startServer from "./ExpressStreamHandler.js";
-import dotenv from "dotenv";
-
-// Load environment variables from .env files
-dotenv.config();
+import startServer from "./infrastructure/primary/ExpressStreamHandler.js";
 
 // Define the port to listen on (default to 3000 if not specified)
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;

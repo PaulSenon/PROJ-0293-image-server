@@ -12,7 +12,7 @@ mkdir -p $LAMBDA_DIR
 
 # Copy the Lambda handler
 echo "Copying Lambda handler..."
-cp dist/controllers/aws/lambdaController.js $LAMBDA_DIR/index.js
+cp dist/lambdaEntrypoint.js $LAMBDA_DIR/index.js
 
 # Copy dependencies
 echo "Copying dependencies..."

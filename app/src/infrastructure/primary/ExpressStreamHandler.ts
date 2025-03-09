@@ -6,17 +6,23 @@ import S3FileLoader from "../secondary/S3FileLoader.js";
 import SharpImageProcessor from "../secondary/SharpImageProcessor.js";
 import ProcessImageUseCase from "../../application/useCases/ProcessImageUseCase.js";
 import type {
-  RawRequestParams,
   RawRequestHeaders,
-} from "../../shared/dto/RawRequest.dto.js";
+  RawRequestParams,
+} from "../../shared/dto/Request.dto.js";
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
+
 const SUCCESS_CACHE_CONTROL =
   "public, max-age=21600, stale-while-revalidate=86400, stale-if-error=86400";
 const NOT_FOUND_CACHE_CONTROL =
   "public, max-age=1, stale-while-revalidate=10, stale-if-error=86400";
 const ERROR_CACHE_CONTROL = "public, max-age=1";
 
+console.log(process.env.DEV_ONLY_S3_ACCESS_KEY);
+console.log(process.env.DEV_ONLY_S3_SECRET_KEY);
+console.log(process.env.DEV_ONLY_S3_ENDPOINT);
+console.log(process.env.AWS_REGION);
+console.log(BUCKET_NAME);
 export class ExpressStreamHandler
   implements IStreamRequestHandler<Request, Response>
 {
@@ -27,13 +33,21 @@ export class ExpressStreamHandler
   async handle(req: Request, res: Response): Promise<void> {
     try {
       // 1. parse request params
-      const rawRequestParams = req.query as unknown as RawRequestParams;
+      const rawRequestParams = req.query;
       const headerCustomCacheKey = req.header("x-cache-key") || "";
       const headerIfNoneMatch = req.header("if-none-match");
 
       // 2. setup s3 file loader
       if (!BUCKET_NAME) throw Error("missing env BUCKET_NAME");
-      const s3Client = new S3Client({});
+      const s3Client = new S3Client({
+        credentials: {
+          accessKeyId: process.env.DEV_ONLY_S3_ACCESS_KEY || "",
+          secretAccessKey: process.env.DEV_ONLY_S3_SECRET_KEY || "",
+        },
+        endpoint: process.env.DEV_ONLY_S3_ENDPOINT || "",
+        forcePathStyle: true,
+        region: process.env.AWS_REGION || "",
+      });
       const s3FileLoader = new S3FileLoader({
         bucketName: BUCKET_NAME,
         s3Client,
@@ -50,7 +64,7 @@ export class ExpressStreamHandler
         imageProcessor: imageProcessor,
       });
       const useCaseResult = await useCase.execute({
-        rawParams: rawRequestParams,
+        rawParams: rawRequestParams as unknown as RawRequestParams,
         rawHeaders: req.headers as unknown as RawRequestHeaders,
       });
 
@@ -174,7 +188,7 @@ export class ExpressStreamHandler
 }
 
 // Create an Express server with the handler
-export function createExpressServer(port = 3000) {
+export function createExpressServer(port: number) {
   const app = express();
   const handler = new ExpressStreamHandler();
 
@@ -195,6 +209,6 @@ export function createExpressServer(port = 3000) {
 }
 
 // Server startup function for import and direct use
-export default function startServer(port = 3000) {
+export default function startServer(port: number) {
   return createExpressServer(port);
 }

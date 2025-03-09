@@ -1,14 +1,21 @@
 import { z } from "zod";
-import { OutputFormatSchema } from "./ImageProcessorParams.dto.js";
+import {
+  OutputFormatSchema,
+  type OutputFormat,
+} from "./ImageProcessorParams.dto.js";
 import type { ZodSchemaOutput } from "../utils/Zod/ZodUtils.types.js";
-import type {
-  RefinedRequestHeaders,
-  RefinedRequestParams,
-} from "./RefinedRequest.dto.js";
 
 const RawImageTypeSchema = z.union([OutputFormatSchema, z.literal("jpg")]);
 
 export type RawRequestParams = Record<string, string | undefined>;
+export interface RefinedRequestParams {
+  uri: string;
+  w: number;
+  h?: number;
+  q?: number;
+  type?: OutputFormat;
+  meta?: boolean;
+}
 export const RawRequestParamsSchema = z.object({
   uri: z.string(),
   w: z.coerce.number().min(0),
@@ -24,6 +31,11 @@ export const RawRequestParamsSchema = z.object({
 }) satisfies ZodSchemaOutput<RefinedRequestParams>;
 
 export type RawRequestHeaders = Record<string, string | undefined>;
+export interface RefinedRequestHeaders {
+  ifNoneMatch?: string;
+  accept?: string;
+  xCacheKey?: string;
+}
 export const RawRequestHeadersSchema = z
   .object({
     "if-none-match": z.string().optional(),
