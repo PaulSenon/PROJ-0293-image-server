@@ -19,11 +19,11 @@ import { PassThrough } from "stream";
 import type { Stream } from "../../shared/domainObjects.types.js";
 import type { FileMeta } from "../../shared/dto/FileMeta.dto.js";
 import {
-  RefinedRequestHeadersSchema,
-  RefinedRequestParamsSchema,
+  RawRequestHeadersSchema,
+  RawRequestParamsSchema,
   type RefinedRequestHeaders,
   type RefinedRequestParams,
-} from "../../shared/dto/RefinedRequest.dto.js";
+} from "../../shared/dto/Request.dto.js";
 
 interface Params {
   imageProcessor: IImageProcessor;
@@ -49,7 +49,7 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
     const { rawHeaders, rawParams } = input;
 
     // 1. parse raw params
-    const refinedParamsResult = await RefinedRequestParamsSchema.safeParseAsync(
+    const refinedParamsResult = await RawRequestParamsSchema.safeParseAsync(
       rawParams
     );
     if (!refinedParamsResult.success) {
@@ -61,8 +61,9 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
     }
     const params = refinedParamsResult.data;
     const { uri, meta } = params;
-    const refinedHeadersResult =
-      await RefinedRequestHeadersSchema.safeParseAsync(rawHeaders);
+    const refinedHeadersResult = await RawRequestHeadersSchema.safeParseAsync(
+      rawHeaders
+    );
     if (!refinedHeadersResult.success) {
       return Failure(
         new InvalidParamException({
@@ -154,7 +155,13 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
     if (!outputFormatResult.success) return Failure(outputFormatResult.error);
     const outputFormat = outputFormatResult.data;
 
-    // 2. process image
+    // 2. get output content type
+    const outputContentType = this.getOutputContentType({
+      outputFormat,
+      fileMeta,
+    });
+
+    // 3. process image
     const processingParams: ImageProcessorParams = {
       width: w,
       height: h ?? undefined,
@@ -173,7 +180,7 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
     }
     const processedImageStream = processedImageResult.data.stream;
 
-    // 3. write processed image to output stream
+    // 4. write processed image to output stream
     processedImageStream.pipe(outputStream);
 
     return Success({
@@ -181,9 +188,18 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
       stream: outputStream,
       headers: {
         eTag: fileMeta.eTag,
-        contentType: `image/${outputFormat}`,
+        contentType: outputContentType,
       },
     });
+  }
+
+  private getOutputContentType(params: {
+    outputFormat: OutputFormat;
+    fileMeta: FileMeta;
+  }): string {
+    const { outputFormat, fileMeta } = params;
+    if (outputFormat === "matchSource") return fileMeta.contentType;
+    else return `image/${outputFormat}`;
   }
 
   private getOutputFormat(input: {

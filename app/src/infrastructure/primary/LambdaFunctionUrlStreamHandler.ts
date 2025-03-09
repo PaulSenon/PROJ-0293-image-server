@@ -1,7 +1,7 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import type { IStreamRequestHandler } from "./interfaces/IStreamRequestHandler.js";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
-import { streamifyResponse, ResponseStream, isInAWS } from "lambda-stream";
+import { ResponseStream, isInAWS } from "lambda-stream";
 import S3FileLoader from "../secondary/S3FileLoader.js";
 import SharpImageProcessor from "../secondary/SharpImageProcessor.js";
 import ProcessImageUseCase from "../../application/useCases/ProcessImageUseCase.js";
@@ -14,14 +14,25 @@ const NOT_FOUND_CACHE_CONTROL =
   "public, max-age=1, stale-while-revalidate=10, stale-if-error=86400";
 const ERROR_CACHE_CONTROL = "public, max-age=1";
 
+// This is a type for the AWS Lambda streamifyResponse handler
+// It's not available in the @types/aws-lambda package, so we define it here
+declare global {
+  namespace awslambda {
+    class HttpResponseStream {
+      static from(stream: any, options: any): any;
+    }
+  }
+}
+
 export class LambdaFunctionUrlStreamHandler
   implements IStreamRequestHandler<APIGatewayProxyEventV2, ResponseStream>
 {
   constructor() {
-    if (!isInAWS())
+    if (!isInAWS()) {
       throw Error(
         "LambdaFunctionUrlStreamHandler must be used in AWS lambda environment"
       );
+    }
   }
 
   async handle(
@@ -164,8 +175,3 @@ export class LambdaFunctionUrlStreamHandler
     return ERROR_CACHE_CONTROL;
   }
 }
-
-const lambdaHandler = new LambdaFunctionUrlStreamHandler();
-export const handler = streamifyResponse(
-  lambdaHandler.handle.bind(lambdaHandler)
-);

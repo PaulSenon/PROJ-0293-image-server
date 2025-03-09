@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/_new/localEntrypoint.ts",
     "build": "rimraf dist && tsc",
     "build:lambda": "bash scripts/build-lambda.sh",
     "start": "node dist/index.js",

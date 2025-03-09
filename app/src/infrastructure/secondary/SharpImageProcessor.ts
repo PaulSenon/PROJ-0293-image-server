@@ -41,12 +41,15 @@ export default class SharpImageProcessor
       const outputStream = new PassThrough();
 
       // Configure Sharp transformer
+      // (i) rotate is to handle EXIF orientation
       let transformer = sharp().timeout({ seconds: 5 }).rotate();
 
       // handle fit and allowUpscale
       transformer = transformer.resize(width, height, {
         fit,
         withoutEnlargement: !allowUpscale,
+        kernel: "lanczos3",
+        fastShrinkOnLoad: false,
       });
 
       // handle sharpen
@@ -73,7 +76,7 @@ export default class SharpImageProcessor
           break;
         }
         case "png": {
-          transformer.png({ quality });
+          transformer.png({ quality, progressive: true });
           break;
         }
         case "jpeg": {
