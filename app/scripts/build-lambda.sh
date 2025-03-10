@@ -2,12 +2,12 @@
 set -e
 
 echo "Building using Docker builder stage..."
-docker build --platform linux/amd64 --target builder -f docker/Dockerfile.lambda-prod -t lambda-builder .
+docker build --platform linux/amd64 --target output -f docker/Dockerfile.lambda-prod -t lambda-builder .
 
 echo "Extracting build artifacts..."
 docker create --name temp-builder lambda-builder
 mkdir -p dist/lambda
-docker cp temp-builder:/app/dist/lambda/build.zip ./dist/lambda/build.zip
+docker cp temp-builder:/output/build.zip ./dist/lambda/build.zip
 docker rm temp-builder
 
 echo "Lambda deployment package created at dist/lambda/build.zip"
