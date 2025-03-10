@@ -14,6 +14,12 @@ const NOT_FOUND_CACHE_CONTROL =
   "public, max-age=1, stale-while-revalidate=10, stale-if-error=86400";
 const ERROR_CACHE_CONTROL = "public, max-age=1";
 
+console.log(process.env.DEV_ONLY_S3_ACCESS_KEY);
+console.log(process.env.DEV_ONLY_S3_SECRET_KEY);
+console.log(process.env.DEV_ONLY_S3_ENDPOINT);
+console.log(process.env.AWS_REGION);
+console.log(BUCKET_NAME);
+
 // This is a type for the AWS Lambda streamifyResponse handler
 // It's not available in the @types/aws-lambda package, so we define it here
 declare global {
@@ -40,6 +46,11 @@ export class LambdaFunctionUrlStreamHandler
     responseStream: ResponseStream
   ): Promise<void> {
     try {
+      console.log("request", {
+        params: event.queryStringParameters,
+        headers: event.headers,
+      });
+
       // 1. parse request params
       const rawRequestParams = event.queryStringParameters || {};
       const headerCustomCacheKey = event.headers["x-cache-key"] || "";
@@ -47,7 +58,15 @@ export class LambdaFunctionUrlStreamHandler
 
       // 2. setup s3 file loader
       if (!BUCKET_NAME) throw Error("missing env BUCKET_NAME");
-      const s3Client = new S3Client({});
+      const s3Client = new S3Client({
+        credentials: {
+          accessKeyId: process.env.DEV_ONLY_S3_ACCESS_KEY || "",
+          secretAccessKey: process.env.DEV_ONLY_S3_SECRET_KEY || "",
+        },
+        endpoint: process.env.DEV_ONLY_S3_ENDPOINT || "",
+        forcePathStyle: true,
+        region: process.env.AWS_REGION || "",
+      });
       const s3FileLoader = new S3FileLoader({
         bucketName: BUCKET_NAME,
         s3Client,
@@ -127,10 +146,25 @@ export class LambdaFunctionUrlStreamHandler
         eTag: headers.eTag,
         customCacheKey: headerCustomCacheKey,
       });
-      await Promise.race([
-        pipeline(stream, responseStream),
-        new Promise((resolve) => setTimeout(resolve, 10_000)),
-      ]);
+
+      stream.pipe(responseStream);
+      // await Promise.race([
+      //   pipeline(stream, responseStream),
+      //   new Promise((resolve) => setTimeout(resolve, 10_000)),
+      // ]);
+      // Set up a timeout to prevent hanging connections
+      const timeout = setTimeout(() => {
+        console.warn("Stream processing timeout reached (10s)");
+        if (!responseStream.writableEnded) responseStream.end();
+      }, 10000);
+
+      // Clean up timeout when stream ends
+      stream.on("end", () => clearTimeout(timeout));
+      stream.on("error", (err) => {
+        clearTimeout(timeout);
+        console.error("Stream error:", err);
+        if (!responseStream.writableEnded) responseStream.end();
+      });
       return;
     } catch (error) {
       console.error("Error processing image:", error);
