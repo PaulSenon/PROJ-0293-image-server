@@ -33,7 +33,7 @@ services:
       - volume-pnpm-store-image-server:/app/image-server/.pnpm-store
     working_dir: /app/image-server
     ports:
-      - "3000:3000"
+      - "${PORT}:3000"
     depends_on:
       s3:
         condition: service_started
@@ -49,7 +49,7 @@ services:
       context: ..
       dockerfile: ./docker/Dockerfile.express-prod
     ports:
-      - "3000:3000"
+      - "${PORT}:3000"
     env_file:
       - ../.env
       - ../.env.local
@@ -71,7 +71,7 @@ services:
       context: ..
       dockerfile: ./docker/Dockerfile.lambda-prod
     ports:
-      - "3000:8080"
+      - "3001:8080"
     env_file:
       - ../.env
       - ../.env.local
@@ -85,6 +85,24 @@ services:
     # but with the correct handler argument
     command: "index.handler"
 
+  iso-prod-lambda-gw:
+    build: 
+      context: ../dev/localApiGateway
+      dockerfile: Dockerfile
+    links:
+      - iso-prod-lambda
+    env_file:
+      - ../.env
+      - ../.env.local
+      - ../.env.development
+      - ../.env.development.local 
+    ports:
+      - "${PORT}:8080"
+    environment:
+      - PORT=8080
+      - LAMBDA_URL=http://iso-prod-lambda:8080/2015-03-31/functions/function/invocations
+    volumes:
+      - ../dev/localApiGateway:/app
 
 volumes:
   volume-pnpm-store-image-server:

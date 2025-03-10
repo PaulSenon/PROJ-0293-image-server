@@ -66,8 +66,8 @@ prod-express: docker-prod-build ## Run only the Express production container
 	$(COMPOSE) up iso-prod-express
 
 prod-lambda: docker-prod-build ## Run only the Lambda production container
-	$(COMPOSE) build iso-prod-lambda
-	$(COMPOSE) up iso-prod-lambda
+	$(COMPOSE) build iso-prod-lambda --no-cache
+	$(COMPOSE) up iso-prod-lambda-gw
 
 # Logs Commands
 logs: ## View container logs
@@ -92,7 +92,14 @@ docker-build-debug: ## Build the Docker image with debug output
 docker-clean: ## Remove Docker containers, images, and volumes
 	$(COMPOSE) down --rmi all --volumes --remove-orphans
 
+
+corepack-upgrade: ## Upgrade corepack to the latest version
+	$(call RUN_IN_DEV_ENV,/bin/sh -c "corepack use pnpm@latest && pnpm install")
+
 # PNPM commands (run inside container)
+pnpm-upgrade: ## Upgrade pnpm to the latest version and upgrade all dependencies
+	$(call RUN_IN_DEV_ENV,/bin/sh -c "pnpm upgrade && pnpm install")
+
 pnpm-install: ## Install pnpm dependencies
 	$(call RUN_IN_DEV_ENV,pnpm install)
 
