@@ -59,7 +59,8 @@ build: ## Build the project
 	$(call RUN_IN_DEV_ENV,pnpm run build)
 
 build-lambda: ## Build the lambda deployment package
-	$(call RUN_IN_DEV_ENV,pnpm run build:lambda)
+	rm -rf dist/
+	./scripts/build-lambda.sh
 
 prod-express: docker-prod-build ## Run only the Express production container
 	$(COMPOSE) build iso-prod-express

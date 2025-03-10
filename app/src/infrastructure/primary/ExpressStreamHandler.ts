@@ -1,7 +1,6 @@
 import express from "express";
 import type { Request, Response } from "express";
 import type { IStreamRequestHandler } from "./interfaces/IStreamRequestHandler.js";
-import { S3Client } from "@aws-sdk/client-s3";
 import S3FileLoader from "../secondary/S3FileLoader.js";
 import SharpImageProcessor from "../secondary/SharpImageProcessor.js";
 import ProcessImageUseCase from "../../application/useCases/ProcessImageUseCase.js";
@@ -9,6 +8,7 @@ import type {
   RawRequestHeaders,
   RawRequestParams,
 } from "../../shared/dto/Request.dto.js";
+import { getS3Client } from "./s3ClientProvider.js";
 
 const BUCKET_NAME = process.env.BUCKET_NAME;
 
@@ -39,15 +39,7 @@ export class ExpressStreamHandler
 
       // 2. setup s3 file loader
       if (!BUCKET_NAME) throw Error("missing env BUCKET_NAME");
-      const s3Client = new S3Client({
-        credentials: {
-          accessKeyId: process.env.DEV_ONLY_S3_ACCESS_KEY || "",
-          secretAccessKey: process.env.DEV_ONLY_S3_SECRET_KEY || "",
-        },
-        endpoint: process.env.DEV_ONLY_S3_ENDPOINT || "",
-        forcePathStyle: true,
-        region: process.env.AWS_REGION || "",
-      });
+      const s3Client = getS3Client();
       const s3FileLoader = new S3FileLoader({
         bucketName: BUCKET_NAME,
         s3Client,
