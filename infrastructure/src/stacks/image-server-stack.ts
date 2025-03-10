@@ -6,6 +6,7 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
+import * as path from "path";
 
 interface ImageServerStackProps extends cdk.StackProps {
   environment: string;
@@ -67,6 +68,7 @@ export class ImageServerStack extends cdk.Stack {
     // );
 
     // Import image server role from CMS stack
+
     const imageServerRole = iam.Role.fromRoleArn(
       this,
       "ImportedImageServerRole",
@@ -77,15 +79,18 @@ export class ImageServerStack extends cdk.Stack {
     );
 
     // Create Lambda function for image processing
+    const pathToLambdaZip = path.resolve(
+      __dirname,
+      "../../../app/dist/lambda/build.zip"
+    );
+    console.log("Path to lambda zip:", pathToLambdaZip);
     this.processingFunction = new lambda.Function(
       this,
       "ImageProcessingLambda",
       {
         runtime: lambda.Runtime.NODEJS_22_X,
         handler: "index.handler",
-        code: lambda.Code.fromAsset(
-          "../../image-server/app/dist/lambda-deployment.zip"
-        ),
+        code: lambda.Code.fromAsset(pathToLambdaZip),
         timeout: cdk.Duration.seconds(props.imageProcessor.timeout),
         memorySize: props.imageProcessor.memorySize,
         architecture: lambda.Architecture.ARM_64,
@@ -93,6 +98,7 @@ export class ImageServerStack extends cdk.Stack {
         environment: {
           NODE_OPTIONS: "--enable-source-maps",
           BUCKET_NAME: cmsBucketName,
+          NODE_ENV: "production",
         },
       }
     );

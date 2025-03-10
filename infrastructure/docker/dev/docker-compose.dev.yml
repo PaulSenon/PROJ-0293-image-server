@@ -9,10 +9,11 @@ services:
       args:
         - NODE_VERSION=${NODE_VERSION}
     volumes:
-      - ../..:/app/infrastructure:delegated
-      - volume-pnpm-store:/app/infrastructure/.pnpm-store
+      - ../..:/image-server/infrastructure:delegated
+      - ../../../app/dist:/image-server/app/dist:ro
+      - volume-pnpm-store:/image-server/infrastructure/.pnpm-store
       - volume-aws-credentials:/root/.aws
-    working_dir: /app/infrastructure
+    working_dir: /image-server/infrastructure
     env_file:
       - ../../.env
     command: bash

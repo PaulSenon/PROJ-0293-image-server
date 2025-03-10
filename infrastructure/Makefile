@@ -123,16 +123,16 @@ docker-down: ## Stop all containers ()
 npm-install: ## Install dependencies
 	$(call run_in_dev_container_smart,$(PACKAGE_MANAGER) install)
 
-npm-upgrade: ## Upgrade all dependencies
-	$(call run_in_dev_container_smart,$(PACKAGE_MANAGER) upgrade && $(PACKAGE_MANAGER) install)
+npm-upgrade: ## Upgrade pnpm to the latest version and upgrade all dependencies
+	$(call run_in_dev_container_smart,/bin/sh -c "$(PACKAGE_MANAGER) upgrade && $(PACKAGE_MANAGER) install")
 
 npm-clean: ## Clean dependencies and generated files
 	$(call run_in_dev_container_smart,$(PACKAGE_MANAGER) run clean)
 
 
 # Miscellaneous Commands
-corepack-upgrade: ## Upgrade corepack to the latest version (use when you see that a newer version current package manager is available)
-	$(call run_in_dev_container_smart,corepack up)
+corepack-upgrade: ## Upgrade corepack to the latest version
+	$(call run_in_cms_smart,/bin/sh -c "corepack use $(PACKAGE_MANAGER)@latest && $(PACKAGE_MANAGER) install")
 
 
 # Internal Utility Commands

@@ -8,7 +8,7 @@ build({
   target: 'node22',
   format: 'cjs',
   outfile: 'dist/lambda/index.js',
-  external: ['aws-sdk', '@aws-sdk/*', 'sharp'],
+  external: ['aws-sdk', 'sharp'],
   sourcemap: true,
   sourcesContent: false,
 })
