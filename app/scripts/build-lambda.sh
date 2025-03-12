@@ -2,7 +2,7 @@
 set -e
 
 echo "Building using Docker builder stage..."
-docker build --platform linux/arm64 --target output -f docker/Dockerfile.lambda-prod -t lambda-builder .
+docker build --no-cache --platform linux/arm64 --target output -f docker/Dockerfile.lambda-prod -t lambda-builder .
 
 echo "Extracting build artifacts..."
 docker create --name temp-builder lambda-builder
