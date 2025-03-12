@@ -44,11 +44,6 @@ export class LambdaFunctionUrlStreamHandler
     responseStream: ResponseStream
   ): Promise<void> {
     try {
-      console.log("request", {
-        params: event.queryStringParameters,
-        headers: event.headers,
-      });
-
       // 1. parse request params
       const rawRequestParams = event.queryStringParameters || {};
       const headerCustomCacheKey = event.headers["x-cache-key"] || "";
@@ -108,10 +103,26 @@ export class LambdaFunctionUrlStreamHandler
             responseStream.end();
             return;
           case "IMAGE_PROCESSING_EXCEPTION":
-            throw Error(useCaseResult.error.privateMessage);
+            responseStream = this.getResponseStream({
+              responseStream,
+              statusCode: 500,
+              contentType: "application/json",
+            });
+            responseStream.write(
+              JSON.stringify({ message: "Error processing image" })
+            );
+            responseStream.end();
+            return;
           default:
             console.error(`unhandled exception`, useCaseResult.error);
-            throw Error(`unhandled exception`);
+            responseStream = this.getResponseStream({
+              responseStream,
+              statusCode: 500,
+              contentType: "application/json",
+            });
+            responseStream.write(JSON.stringify({ message: "Error" }));
+            responseStream.end();
+            return;
         }
       }
 
@@ -135,38 +146,46 @@ export class LambdaFunctionUrlStreamHandler
         contentType: headers.contentType,
         eTag: headers.eTag,
         customCacheKey: headerCustomCacheKey,
+        isAlreadyCompressed: true,
       });
 
-      stream.pipe(responseStream);
-      // await Promise.race([
-      //   pipeline(stream, responseStream),
-      //   new Promise((resolve) => setTimeout(resolve, 10_000)),
-      // ]);
       // Set up a timeout to prevent hanging connections
       const timeout = setTimeout(() => {
         console.warn("Stream processing timeout reached (10s)");
-        if (!responseStream.writableEnded) responseStream.end();
-      }, 10000);
+        const error = new Error("Stream processing timeout reached (10s)");
+        stream.destroy(error);
+        responseStream.destroy(error);
+        process.exit(1);
+      }, 10_000);
 
-      // Clean up timeout when stream ends
+      // actual response streaming
+      stream.pipe(responseStream).on("error", (err) => {
+        console.error("Stream error:", err);
+        stream.destroy(err);
+        responseStream.destroy(err);
+        process.exit(1);
+      });
+
       stream.on("end", () => clearTimeout(timeout));
       stream.on("error", (err) => {
         clearTimeout(timeout);
         console.error("Stream error:", err);
-        if (!responseStream.writableEnded) responseStream.end();
+        stream.destroy(err);
+        responseStream.destroy(err);
+        process.exit(1);
       });
+      responseStream.on("error", (err) => {
+        clearTimeout(timeout);
+        console.error("Response stream error:", err);
+        stream.destroy();
+        process.exit(1);
+      });
+
       return;
     } catch (error) {
       console.error("Error processing image:", error);
-      responseStream = this.getResponseStream({
-        responseStream,
-        statusCode: 500,
-        contentType: "application/json",
-      });
-      responseStream.write(
-        JSON.stringify({ message: "Error processing image" })
-      );
-      responseStream.end();
+      responseStream.destroy();
+      process.exit(1);
     }
   }
 
@@ -176,9 +195,16 @@ export class LambdaFunctionUrlStreamHandler
     contentType?: string;
     eTag?: string;
     customCacheKey?: string;
+    isAlreadyCompressed?: boolean;
   }) {
-    const { responseStream, statusCode, contentType, eTag, customCacheKey } =
-      params;
+    const {
+      responseStream,
+      statusCode,
+      contentType,
+      eTag,
+      customCacheKey,
+      isAlreadyCompressed,
+    } = params;
     const cacheControl = this.getCacheControlFromStatusCode(statusCode);
     return awslambda.HttpResponseStream.from(responseStream, {
       statusCode,
@@ -188,6 +214,7 @@ export class LambdaFunctionUrlStreamHandler
         "Content-Type": contentType,
         "X-Cache-Key": customCacheKey,
         ETag: eTag,
+        "Content-Encoding": isAlreadyCompressed ? "identity" : undefined,
       },
     });
   }

@@ -146,7 +146,7 @@ export class ImageServerStack extends cdk.Stack {
             }
 
             // 2. rewrite the URI to include cache key
-            var cacheKey = '/img/'+type+'/'+queryParams.uri.value;
+            var cacheKey = '/img/'+queryParams.uri.value;
             // store cache key in headers for debugging
             headers['x-cache-key'] = {value: cacheKey};
             request.uri = cacheKey;
