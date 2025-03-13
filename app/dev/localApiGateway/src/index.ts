@@ -127,10 +127,7 @@ app.all("*", async (req: Request, res: Response) => {
       //   : req.body.toString("base64"),
     };
 
-    console.log("Request:", {
-      url: lambdaUrl,
-      payload: lambdaPayload, // req.body,
-    });
+    console.log("Request:", lambdaUrl);
 
     // Simple approach: Buffer the response and handle it
     // Send the request to Lambda

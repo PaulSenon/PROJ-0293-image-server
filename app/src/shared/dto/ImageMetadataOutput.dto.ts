@@ -14,7 +14,7 @@ export interface ImageMetadata {
   density: number;
   hasProfile: boolean;
   hasAlpha: boolean;
-  orientation: number;
+  orientation?: number;
   exif?: Record<string, unknown>;
   iptc?: Record<string, unknown>;
 }
@@ -28,7 +28,7 @@ export const ImageMetadataSchema = z.object({
   density: z.number(),
   hasProfile: z.boolean(),
   hasAlpha: z.boolean(),
-  orientation: z.number(),
+  orientation: z.number().optional(),
   exif: z.record(z.string(), z.unknown()).optional(),
   iptc: z.record(z.string(), z.unknown()).optional(),
 }) satisfies ZodSchemaOutput<ImageMetadata>;

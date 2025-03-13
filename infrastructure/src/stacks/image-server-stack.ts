@@ -5,6 +5,7 @@ import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as ssm from "aws-cdk-lib/aws-ssm";
+import * as logs from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -33,7 +34,7 @@ interface ImageServerStackProps extends cdk.StackProps {
  * Dependencies:
  * - CMS stack (for S3 bucket and IAM role)
  *   - SSM Parameter: /${cmsStackName}/media-bucket/name
- *   - SSM Parameter: /${cmsStackName}/image-server/role-arn
+ *   - SSM Parameter: /${cmsStackName}/image-server/s3-ro-policy-arn
  *
  * Exports:
  * - CloudFront URL
@@ -60,22 +61,36 @@ export class ImageServerStack extends cdk.Stack {
       `/${props.cmsStackName}/media-bucket/name`
     );
 
-    // Import CMS bucket
-    // const cmsBucketName = s3.Bucket.fromBucketName(
-    //   this,
-    //   "ImportedCMSBucket",
-    //   cmsBucketName
-    // );
-
-    // Import image server role from CMS stack
-
-    const imageServerRole = iam.Role.fromRoleArn(
+    // Import the managed policy from CMS stack
+    const imageServerS3Policy = iam.ManagedPolicy.fromManagedPolicyArn(
       this,
-      "ImportedImageServerRole",
+      "ImportedImageServerS3Policy",
       ssm.StringParameter.valueForStringParameter(
         this,
-        `/${props.cmsStackName}/image-server/role-arn`
+        `/${props.cmsStackName}/image-server/s3-ro-policy-arn`
       )
+    );
+
+    // Create our own Lambda execution role with CloudWatch logs permissions
+    const lambdaExecutionRole = new iam.Role(this, "ImageProcessorLambdaRole", {
+      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      description:
+        "Execution role for image processor lambda with CloudWatch logs permissions",
+      managedPolicies: [
+        // Add AWS managed policy for Lambda basic execution (includes CloudWatch Logs)
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "service-role/AWSLambdaBasicExecutionRole"
+        ),
+        // Add the imported policy from CMS stack
+        imageServerS3Policy,
+      ],
+    });
+
+    // Add specific resource tags
+    cdk.Tags.of(lambdaExecutionRole).add("ResourceType", "IAM");
+    cdk.Tags.of(lambdaExecutionRole).add(
+      "ResourceName",
+      "ImageProcessorLambdaRole"
     );
 
     // Create Lambda function for image processing
@@ -94,12 +109,13 @@ export class ImageServerStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(props.imageProcessor.timeout),
         memorySize: props.imageProcessor.memorySize,
         architecture: lambda.Architecture.ARM_64,
-        role: imageServerRole, // Use the role from CMS stack
+        role: lambdaExecutionRole, // Use our own role with CloudWatch logs permissions
         environment: {
           NODE_OPTIONS: "--enable-source-maps",
           BUCKET_NAME: cmsBucketName,
           NODE_ENV: "production",
         },
+        logRetention: logs.RetentionDays.ONE_WEEK,
       }
     );
 
@@ -194,7 +210,7 @@ export class ImageServerStack extends cdk.Stack {
           enableAcceptEncodingBrotli: true,
           defaultTtl: cdk.Duration.days(365),
           maxTtl: cdk.Duration.days(365),
-          minTtl: cdk.Duration.days(365),
+          minTtl: cdk.Duration.seconds(1),
         }),
         originRequestPolicy: new cloudfront.OriginRequestPolicy(
           this,

@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { Metadata } from "sharp";
 import exifReader from "exif-reader";
 import iptcReader from "iptc-reader";
 import { PassThrough } from "stream";
@@ -39,6 +39,29 @@ export default class SharpImageProcessor
 
       // Create a PassThrough stream to be returned
       const outputStream = new PassThrough();
+      let outputChunkCount = 0;
+      outputStream.on("data", (chunk) => {
+        outputChunkCount++;
+        console.log(`processed chunk: ${outputChunkCount}`);
+      });
+      outputStream.on("end", () => {
+        console.log(`processed ended`);
+      });
+      outputStream.on("finish", () => {
+        console.log(`processed finished`);
+      });
+
+      let inputChunkCount = 0;
+      inputStream.on("data", (chunk) => {
+        inputChunkCount++;
+        console.log(`read chunk: ${inputChunkCount}`);
+      });
+      inputStream.on("end", () => {
+        console.log(`read ended`);
+      });
+      inputStream.on("finish", () => {
+        console.log(`read finished`);
+      });
 
       // Configure Sharp transformer
       // (i) rotate is to handle EXIF orientation
@@ -132,14 +155,15 @@ export default class SharpImageProcessor
         hasProfile: sharpMetadata.hasProfile,
         hasAlpha: sharpMetadata.hasAlpha,
         orientation: sharpMetadata.orientation,
-        exif: this.getExif(buffer),
-        iptc: this.getIptc(buffer),
+        exif: this.getExif(sharpMetadata),
+        iptc: this.getIptc(sharpMetadata),
       });
 
       return Success({
         metadata,
       });
     } catch (error) {
+      console.error("Error processing image metadata:", error);
       const exceptions = new ImageProcessingException({
         publicMessage: "Error processing image metadata",
         privateMessage:
@@ -149,9 +173,12 @@ export default class SharpImageProcessor
     }
   }
 
-  private getExif(buffer: Buffer): Record<string, unknown> | undefined {
+  private getExif(
+    sharpMetadata: Metadata
+  ): Record<string, unknown> | undefined {
     try {
-      const exif = exifReader(buffer);
+      if (!sharpMetadata.exif) return undefined;
+      const exif = exifReader(sharpMetadata.exif);
       return exif;
     } catch (error) {
       console.error("Error reading EXIF data:", error);
@@ -159,9 +186,12 @@ export default class SharpImageProcessor
     }
   }
 
-  private getIptc(buffer: Buffer): Record<string, unknown> | undefined {
+  private getIptc(
+    sharpMetadata: Metadata
+  ): Record<string, unknown> | undefined {
     try {
-      const iptc = iptcReader(buffer);
+      if (!sharpMetadata.iptc) return undefined;
+      const iptc = iptcReader(sharpMetadata.iptc);
       return iptc;
     } catch (error) {
       console.error("Error reading IPTC data:", error);

@@ -73,12 +73,18 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
     }
     const headers = refinedHeadersResult.data;
 
+    console.log(`image requested: ${uri}`, {
+      params,
+      headers,
+    });
+
     const outputStream = new PassThrough();
     // 1. file not changed
     const fileMetaResult = await this.fileMetaLoader.loadFileMeta({ uri });
     if (!fileMetaResult.success) return Failure(fileMetaResult.error);
     const fileMeta = fileMetaResult.data;
     if (headers.ifNoneMatch === fileMeta.eTag) {
+      console.log(`return unmodified: ${uri}`);
       return Success({
         type: "unmodified",
       });
@@ -95,6 +101,7 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
 
     if (meta) {
       // 2.2. metadata requested
+      console.log(`handle metadata request: ${uri}`);
       return this.handleMetadataRequest({
         inputStream,
         outputStream,
@@ -102,6 +109,7 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
       });
     } else {
       // 2.3. image processing requested
+      console.log(`handle image processing request: ${uri}`);
       return this.handleImageProcessingRequest({
         inputStream,
         outputStream,
@@ -179,6 +187,13 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
       return Failure(processedImageResult.error);
     }
     const processedImageStream = processedImageResult.data.stream;
+
+    processedImageStream.on("close", () => {
+      console.log(`processing closed`);
+    });
+    processedImageStream.on("error", (error) => {
+      console.error(`processing error:`, error);
+    });
 
     // 4. write processed image to output stream
     processedImageStream.pipe(outputStream);
