@@ -39,28 +39,17 @@ export default class SharpImageProcessor
 
       // Create a PassThrough stream to be returned
       const outputStream = new PassThrough();
+
       let outputChunkCount = 0;
-      outputStream.on("data", (chunk) => {
-        outputChunkCount++;
-        console.log(`processed chunk: ${outputChunkCount}`);
-      });
-      outputStream.on("end", () => {
-        console.log(`processed ended`);
-      });
+      outputStream.on("data", () => outputChunkCount++);
       outputStream.on("finish", () => {
-        console.log(`processed finished`);
+        console.log(`processed finished with ${outputChunkCount} chunks`);
       });
 
       let inputChunkCount = 0;
-      inputStream.on("data", (chunk) => {
-        inputChunkCount++;
-        console.log(`read chunk: ${inputChunkCount}`);
-      });
-      inputStream.on("end", () => {
-        console.log(`read ended`);
-      });
+      inputStream.on("data", () => inputChunkCount++);
       inputStream.on("finish", () => {
-        console.log(`read finished`);
+        console.log(`read finished with ${inputChunkCount} chunks`);
       });
 
       // Configure Sharp transformer

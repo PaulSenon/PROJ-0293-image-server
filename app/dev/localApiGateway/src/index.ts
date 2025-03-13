@@ -118,6 +118,7 @@ app.all("*", async (req: Request, res: Response) => {
     const lambdaPayload = {
       httpMethod: req.method,
       headers: {
+        ...req.headers,
         "x-cache-key": "i".repeat(Math.random() * 1000),
       }, // req.headers,
       queryStringParameters: req.query,

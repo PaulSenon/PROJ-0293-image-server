@@ -67,7 +67,7 @@ prod-express: docker-prod-build ## Run only the Express production container
 	$(COMPOSE) up iso-prod-express
 
 prod-lambda: docker-prod-build ## Run only the Lambda production container
-	$(COMPOSE) build iso-prod-lambda --no-cache
+	$(COMPOSE) build iso-prod-lambda
 	$(COMPOSE) up iso-prod-lambda-gw
 
 # Logs Commands

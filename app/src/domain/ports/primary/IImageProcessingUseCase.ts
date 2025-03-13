@@ -25,6 +25,10 @@ export type ProcessedOutput = {
 };
 export type UnmodifiedOutput = {
   type: "unmodified";
+  headers: {
+    contentType: string;
+    eTag: ETag;
+  };
 };
 export type Output = ProcessedOutput | UnmodifiedOutput;
 

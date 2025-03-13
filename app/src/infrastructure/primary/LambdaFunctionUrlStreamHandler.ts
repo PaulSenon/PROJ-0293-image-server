@@ -82,6 +82,7 @@ export class LambdaFunctionUrlStreamHandler
               eTag: headerIfNoneMatch,
               customCacheKey: headerCustomCacheKey,
             });
+            responseStream.write(0x00); // really important to write something to the stream before ending it
             responseStream.end();
             return;
           case "INVALID_PARAM_EXCEPTION":
@@ -126,20 +127,24 @@ export class LambdaFunctionUrlStreamHandler
         }
       }
 
+      const { headers } = useCaseResult.data;
+
       // 6. handle use case unmodified
       if (useCaseResult.data.type === "unmodified") {
         responseStream = this.getResponseStream({
           responseStream,
           statusCode: 304,
-          eTag: headerIfNoneMatch,
+          contentType: headers.contentType,
+          eTag: headers.eTag,
           customCacheKey: headerCustomCacheKey,
         });
+        responseStream.write(0x00); // really important to write something to the stream before ending it
         responseStream.end();
         return;
       }
 
       // 7. handle use case success
-      const { headers, stream } = useCaseResult.data;
+      const { stream } = useCaseResult.data;
       responseStream = this.getResponseStream({
         responseStream,
         statusCode: 200,

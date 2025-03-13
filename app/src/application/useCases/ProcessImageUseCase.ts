@@ -84,9 +84,20 @@ export default class ProcessImageUseCase implements IImageProcessingUseCase {
     if (!fileMetaResult.success) return Failure(fileMetaResult.error);
     const fileMeta = fileMetaResult.data;
     if (headers.ifNoneMatch === fileMeta.eTag) {
+      // 1. process raw type => output format
+      const outputFormatResult = this.getOutputFormat({
+        headers,
+        params,
+      });
+      if (!outputFormatResult.success) return Failure(outputFormatResult.error);
+      const outputFormat = outputFormatResult.data;
       console.log(`return unmodified: ${uri}`);
       return Success({
         type: "unmodified",
+        headers: {
+          eTag: fileMeta.eTag,
+          contentType: outputFormat,
+        },
       });
     }
 
