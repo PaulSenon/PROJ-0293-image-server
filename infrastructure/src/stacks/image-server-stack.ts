@@ -206,8 +206,8 @@ export class ImageServerStack extends cdk.Stack {
             "X-Cache-Key"
           ),
           cookieBehavior: cloudfront.CacheCookieBehavior.none(),
-          enableAcceptEncodingGzip: true,
-          enableAcceptEncodingBrotli: true,
+          enableAcceptEncodingGzip: false, // don't want to split cache
+          enableAcceptEncodingBrotli: false, // don't want to split cache
           defaultTtl: cdk.Duration.days(365),
           maxTtl: cdk.Duration.days(365),
           minTtl: cdk.Duration.seconds(1),
